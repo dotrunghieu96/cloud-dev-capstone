@@ -14,7 +14,7 @@ import {
   Loader
 } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getTodos, patchTodo } from '../api/todos-api'
+import { createTodo, deleteTodo, getComments, getTodos, patchTodo } from '../api/todos-api'
 import Auth from '../auth/Auth'
 import { Todo } from '../types/Todo'
 
@@ -27,13 +27,15 @@ interface TodosState {
   todos: Todo[]
   newTodoName: string
   loadingTodos: boolean
+  showComments: number
 }
 
 export class Todos extends React.PureComponent<TodosProps, TodosState> {
   state: TodosState = {
     todos: [],
     newTodoName: '',
-    loadingTodos: true
+    loadingTodos: true,
+    showComments: -1
   }
 
   handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,8 +144,15 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     if (this.state.loadingTodos) {
       return this.renderLoading()
     }
+    let comment = null;
+    if (this.state.showComments) {
+      comment = 
+      <Grid.Column width={16}>
+        <Divider />
+      </Grid.Column>;
+    }
 
-    return this.renderTodosList()
+    return this.renderTodosList(comment)
   }
 
   renderLoading() {
@@ -156,7 +165,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     )
   }
 
-  renderTodosList() {
+  renderTodosList(comment: any) {
     return (
       <Grid padded>
         {this.state.todos.map((todo, pos) => {
@@ -171,7 +180,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
               <Grid.Column width={10} verticalAlign="middle">
                 {todo.name}
               </Grid.Column>
-              <Grid.Column width={3} floated="right">
+              <Grid.Column width={2} floated="right">
                 {todo.dueDate}
               </Grid.Column>
               <Grid.Column width={1} floated="right">
@@ -186,6 +195,15 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
               <Grid.Column width={1} floated="right">
                 <Button
                   icon
+                  color="green"
+                  onClick={() => this.onCommentButtonClick(todo.todoId, pos)}
+                >
+                  <Icon name="comments outline" />
+                </Button>
+              </Grid.Column>
+              <Grid.Column width={1} floated="right">
+                <Button
+                  icon
                   color="red"
                   onClick={() => this.onTodoDelete(todo.todoId)}
                 >
@@ -195,6 +213,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
               {todo.attachmentUrl && (
                 <Image src={todo.attachmentUrl} size="small" wrapped />
               )}
+              {comment}
               <Grid.Column width={16}>
                 <Divider />
               </Grid.Column>
@@ -203,6 +222,17 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         })}
       </Grid>
     )
+  }
+
+  async onCommentButtonClick(todoId: string, position: number): Promise<void> {
+    console.log("show comments");
+    const commentItems = await getComments(this.props.auth.getIdToken(), todoId);
+    console.log(commentItems)
+    if (this.state.showComments == position) {
+      this.setState({ showComments: -1 });
+    } else {
+      this.setState({ showComments: position });
+    }
   }
 
   calculateDueDate(): string {
