@@ -25,6 +25,7 @@ provider:
   # ${self:provider.environment.ATTACHMENT_S3_BUCKET}
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
+    TODOS_COMMENT_TABLE: Todos-Comment-${self:provider.stage}
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
     ATTACHMENT_S3_BUCKET: serverless-hieudt-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 3000
@@ -171,6 +172,56 @@ functions:
         Resource:
           - "*"
 
+  GetComments:
+    handler: src/lambda/http/getComments.handler
+    events:
+      - http:
+          method: get
+          path: todos/{todoId}/comment
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - !Sub '${CommentsTable.Arn}/index/*'
+      - Effect: Allow
+        Action:
+          - xray:PutTraceSegments
+          - xray:PutTelemetryRecords
+        Resource:
+          - "*"
+
+  AddComment:
+    handler: src/lambda/http/addComment.handler
+    events:
+      - http:
+          method: post
+          path: todos/{todoId}/comment
+          cors: true
+          authorizer: Auth
+          request:
+            schemas:
+              application/json: ${file(models/create-todo-comment-model.json)}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: 
+          - !GetAtt CommentsTable.Arn
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - !GetAtt TodosTable.Arn
+      - Effect: Allow
+        Action:
+          - xray:PutTraceSegments
+          - xray:PutTelemetryRecords
+        Resource:
+          - "*"
+
 resources:
   Resources:
     # Add necessary AWS resources. You will need at least the following AWS resources
@@ -209,6 +260,33 @@ resources:
           - IndexName: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
             KeySchema:
               - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    CommentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: todoId
+            AttributeType: S
+          - AttributeName: commentId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: todoId
+            KeyType: HASH
+          - AttributeName: commentId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.TODOS_COMMENT_TABLE}
+        LocalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
+            KeySchema:
+              - AttributeName: todoId
                 KeyType: HASH
               - AttributeName: createdAt
                 KeyType: RANGE

@@ -85,4 +85,23 @@ export class TodosAccess {
             })
             .promise();
     }
+
+    async getTodoById(userId: string, todoId: string): Promise<TodoItem> {
+        logger.info(`Getting todo item with id: ${todoId}`);
+        const result = await this.docClient
+            .query({
+                TableName: this.todosTable,
+                KeyConditionExpression: 'userId = :userId AND todoId = :todoId',
+                ExpressionAttributeValues: {
+                    ':userId': userId,
+                    ':todoId': todoId
+                }
+            })
+            .promise();
+        if (result.Items.length > 0) {
+            return result.Items[0] as TodoItem;
+        } else {
+            return null;
+        }
+    }
 }

@@ -1,12 +1,16 @@
-import { TodosAccess } from './todosAcess'
+import { TodosAccess } from './todosAccess'
 import { AttachmentUtils } from './attachmentUtils';
 import { TodoItem } from '../models/TodoItem'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 import * as uuid from 'uuid'
+import { TodoCommentAccess } from './commentAccess';
+import { AddCommentRequest } from '../requests/AddCommentRequest';
+import { TodoComment } from '../models/TodoComment';
 
 const todosAccess = new TodosAccess();
 const attachmentUtils = new AttachmentUtils();
+const commentAccess = new TodoCommentAccess();
 
 // TODO: Implement businessLogic
 export async function createTodo(userId: string, newTodoRequest: CreateTodoRequest) {
@@ -34,4 +38,20 @@ export async function createAttachmentPresignedUrl(userId: string, todoId: strin
 
     await todosAccess.setAttachmentUrl(userId, todoId, s3Bucket);
     return attachmentUtils.getSignedS3Url(todoId, s3Bucket);
+}
+
+export async function addComment(userId:string, todoId: string, request: AddCommentRequest) {
+    //Validate todoId
+    const todoItem: TodoItem = await todosAccess.getTodoById(userId, todoId)
+    if (!todoItem) {
+        throw new Error("todoId is not valid");
+    }
+    const commentId = uuid.v4();
+    const createdAt = new Date().toISOString();
+    const newComment: TodoComment = { todoId, commentId, createdAt, ...request };
+    return commentAccess.addComment(newComment);
+}
+
+export async function getCommentsForTodo(todoId: string) {
+    return commentAccess.getComments(todoId);
 }
