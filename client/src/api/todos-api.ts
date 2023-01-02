@@ -3,6 +3,8 @@ import { Todo } from '../types/Todo';
 import { CreateTodoRequest } from '../types/CreateTodoRequest';
 import Axios from 'axios'
 import { UpdateTodoRequest } from '../types/UpdateTodoRequest';
+import { TodoComment } from '../types/TodoComment';
+import { CreateCommentRequest } from '../types/CreateCommentRequest';
 
 export async function getTodos(idToken: string): Promise<Todo[]> {
   console.log('Fetching todos')
@@ -70,4 +72,34 @@ export async function getUploadUrl(
 
 export async function uploadFile(uploadUrl: string, file: Buffer): Promise<void> {
   await Axios.put(uploadUrl, file)
+}
+
+export async function getComments(idToken: string, todoId: string): Promise<TodoComment[]> {
+  console.log('Fetching todos comment')
+
+  const response = await Axios.get(`${apiEndpoint}/todos/${todoId}/comment`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+  })
+  console.log('Todos comment:', response.data)
+  return response.data.comments
+}
+
+export async function addComments(idToken: string, todoId: string, comment: string): Promise<TodoComment> {
+  console.log('Adding todos comment')
+
+  const newCommnentRequest: CreateCommentRequest = {
+    comment: comment
+  }
+
+  const response = await Axios.post(`${apiEndpoint}/todos/${todoId}/comment`,  JSON.stringify(newCommnentRequest), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    }
+  })
+  console.log('Added Todos comment:', response.data)
+  return response.data.newComment
 }
